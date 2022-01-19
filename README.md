@@ -1,5 +1,5 @@
 
-# Ontario Model Outputs
+# Model Outputs
 
 Hourly generation from VRE and non-VRE units for one year 
 
