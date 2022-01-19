@@ -146,7 +146,6 @@ def model_solve(data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_al
     print('Total Cost:', value(model.obj_func))
 
     # Print results:
-    unit_non_re, unit_hydro_daily, unit_hydro_hourly, unit_solar, unit_wind
     g_F_star = np.zeros((unit_non_re, hour))
     g_Hd_star = np.zeros((unit_hydro_daily, hour))
     g_Hh_star = np.zeros((unit_hydro_hourly, hour))
@@ -195,7 +194,8 @@ def model_solve(data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_al
     result_sheet_hh = results_book.add_worksheet('Hourly Hydro Generation')
     result_sheet_s = results_book.add_worksheet('Solar Generation')
     result_sheet_w = results_book.add_worksheet('Wind Generation')
-    result_sheet_c = results_book.add_worksheet('Total cost')
+    result_sheet_c = results_book.add_worksheet('Total Cost')
+    result_sheet_p = results_book.add_worksheet('LMP')
 
     hour_number = [''] * hour
     for t in T:
@@ -206,9 +206,18 @@ def model_solve(data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_al
     result_sheet_c.write("A1", "Total Cost (Million $)")
     result_sheet_c.write("A2", total_cost / 1000000)
 
+    # Write electricity price result:
+    lmp = np.zeros(hour)
+    for i in range(hour):
+        lmp[i] = model.dual[model.meet_demand_const[i]]
+
+    result_sheet_p.write("A1", "LMP")
+    for item in T:
+        result_sheet_p.write(0, item + 1, hour_number[item])
+        result_sheet_p.write(1, item + 1, lmp[item])
+
     # Write no re non hydro generation results:
     result_sheet_f.write("A1", "Plant ID")
-    result_sheet_f.write("B1", "battery power rating (MW)")
 
     for item in F:
         result_sheet_f.write(item + 1, 0, name_non_re[item])
