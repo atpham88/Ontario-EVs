@@ -43,15 +43,15 @@ def main_function():
                 solar_cap,wind_cap,solar_name, wind_name,unit_non_re,name_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,unit_wind)
 
 def working_directory():
-    data_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\TorontoEVs\\Data Input\\"
-    results_folder = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\TorontoEVs\\Results\\"
-    solar_src_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\TorontoEVs\\Data Input\\" \
+    data_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\"
+    results_folder = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Results\\"
+    solar_src_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\" \
                     "VRE_Resource_Analysis-ON\\Solar_Generation_Data\\"
-    solar_dst_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\TorontoEVs\\Data Input\\" \
+    solar_dst_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\" \
                     "VRE_Resource_Analysis-ON\\solar_all\\"
-    wind_src_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\TorontoEVs\\Data Input\\" \
+    wind_src_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\" \
                    "VRE_Resource_Analysis-ON\\Wind_Generation_Data\\"
-    wind_dst_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\TorontoEVs\\Data Input\\" \
+    wind_dst_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\" \
                    "VRE_Resource_Analysis-ON\\wind_all\\"
     return data_dir,results_folder,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir
 
