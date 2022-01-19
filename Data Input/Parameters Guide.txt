@@ -1,0 +1,20 @@
+SILVER Inputs:
+	VRE Plants:
+	Each wind/solar generator is provided with its accompanying information including capacity and MERRA data.  
+	The MERRA data matches each resource to given hourly capacity factors for solar and wind in the Solar_Generation_data and Wind Generation_Data folders, respectively.  
+	Non-VRE Parameters:
+	These parameters provide performance characteristics and constraints for the different types of plants used in the SILVER models.
+	Non-VRE Plants
+	Each plant in the system is given.
+	The operating cost for the plants are specified by a function in the Operating Cost ($/MWh) column.
+	The 'Kind' of plant matches the plants with the parameters given on the Non-VRE Parameters sheet. 
+Ontario Base Demand:
+	Hourly demand data for Ontario without any additional EV demand.
+EV Charging Scenarios
+	Using a "Home" charging assumption, represents the additional demand from 5 different scenarios (each a different percent penetration) for each hour of the day.
+hydro_daily budget
+	For each hydro_daily plant referenced in SILVER Inputs, contains the generation budget for each day of a year.  
+hydro_hourly capacity
+	Contains the hourly generation data for each hydro_hourly plant in the SILVER Inputs spreadsheet.
+importexport_hourly
+	Fixed import/export data for each hour of the year.  
