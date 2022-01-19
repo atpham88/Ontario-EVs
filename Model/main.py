@@ -21,7 +21,7 @@ from get_import_export import im_ex_data
 from get_hydro_cap import *
 
 def main_params():
-    ev_sce = 1                          # EV scenario to run
+    ev_sce = 5                          # EV scenario to run
     hour = 8760
     day = 365
     cost_hydro = 3.3
