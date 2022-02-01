@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 
-def hydro_daily_cap(data_dir,day):
+def hydro_daily_cap(data_dir,day,hour):
     hydro_daily_data = pd.read_csv(data_dir + 'hydro_daily budget.csv')
     hydro_daily_data = hydro_daily_data.rename({'hydro_daily_1 (MW)': 'hydro_daily_1',
                                                  'hydro_daily_2 (MW)': 'hydro_daily_2',
@@ -22,7 +22,7 @@ def hydro_daily_cap(data_dir,day):
 
     unit_hydro_daily = len(hydro_daily_data_T)
 
-    bi_mat_hydro = np.zeros((unit_hydro_daily, 8760, day))
+    bi_mat_hydro = np.zeros((unit_hydro_daily, hour, day))
     one_mat_hydro = np.ones((unit_hydro_daily, 24))
 
     count1 = 0
