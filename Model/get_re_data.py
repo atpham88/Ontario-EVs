@@ -4,7 +4,7 @@ import glob
 import pandas as pd
 import re
 
-def renewable_data(data_dir,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir,hour):
+def renewable_data(data_dir,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir,hour,starting_hour):
 
     # Put all solar data into one csv file:
     for root, dirs, files in os.walk(solar_src_dir):
@@ -83,7 +83,8 @@ def renewable_data(data_dir,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_di
     solar_data_fill = solar_data[solar_data['name'] == 'Solar_5']
     solar_data = solar_data.reset_index()
     solar_data = solar_data.drop(['index'], axis=1)
-    solar_data.iloc[11,0:hour] = solar_data_fill.iloc[0,0:hour]
+    rows_with_nan = [index for index, row in solar_data.iterrows() if row.isnull().any()]
+    solar_data.iloc[rows_with_nan[0],0:8760] = solar_data_fill.iloc[0,0:8760]
 
     wind_data = frame_wind.merge(silver_input, left_on=['plant ID', 'longitude_MERRA', 'latitude_MERRA'],
                                    right_on=['plant ID', 'longitude_MERRA', 'latitude_MERRA'], how='right')
@@ -91,7 +92,7 @@ def renewable_data(data_dir,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_di
     wind_data = wind_data.drop(['merra_loc', 'latitude_MERRA', 'longitude_MERRA', 'kind', 'latitude', 'longitude',
                                   'bus (ignore)', 'technology type', 'unit capacity [kW]'], axis=1)
 
-    for i in list(range(hour)):
+    for i in list(range(8760)):
         solar_data.iloc[:,i] = solar_data.iloc[:,i] * solar_data['Capacity (MW)']
         wind_data.iloc[:, i] = wind_data.iloc[:, i] * wind_data['Capacity (MW)']
 
@@ -99,7 +100,12 @@ def renewable_data(data_dir,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_di
     wind_name = wind_data['name']
 
     solar_data = solar_data.drop(['plant ID','name','Capacity (MW)'], axis=1)
+    solar_data = solar_data.iloc[:, starting_hour:starting_hour + hour]
+    solar_data.columns = pd.RangeIndex(0, len(solar_data.columns))
+
     wind_data = wind_data.drop(['plant ID', 'name', 'Capacity (MW)'], axis=1)
+    wind_data = wind_data.iloc[:, starting_hour:starting_hour + hour]
+    wind_data.columns = pd.RangeIndex(0, len(wind_data.columns))
 
     solar_cap = {(r, c): solar_data.at[r, c] for r in list(range(len(solar_data))) for c in list(range(hour))}
     wind_cap = {(r, c): wind_data.at[r, c] for r in list(range(len(wind_data))) for c in list(range(hour))}

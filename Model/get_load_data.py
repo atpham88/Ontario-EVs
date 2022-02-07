@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 
-def load_data(ev_sce, data_dir, day):
+def load_data(ev_sce,data_dir,hour,starting_hour):
 
     load_data = pd.read_csv(data_dir + 'Ontario Base Demand.csv')
     load_data = load_data[['demand - base (MW)']]
@@ -15,7 +15,7 @@ def load_data(ev_sce, data_dir, day):
                                                 'Home - 20%': 'EV20', 'Home - 30%': 'EV30'})
     ev_load_data = ev_load_data.astype(float)
     ev_load_data = ev_load_data.drop(columns=['index', 'Hour of Day'])
-    ev_load_data = pd.concat([ev_load_data] * day, ignore_index=True)
+    ev_load_data = pd.concat([ev_load_data] * 365, ignore_index=True)
 
     load_sce = load_data
     load_sce = load_sce.rename(columns={'demand - base (MW)': 'base'})
@@ -37,6 +37,11 @@ def load_data(ev_sce, data_dir, day):
         load = load_sce['EV20']
     elif ev_sce == 5:
         load = load_sce['EV30']
+
+    load = load.iloc[starting_hour:starting_hour+hour]
+    load = load.reset_index()
+    load = load.drop('index', axis = 1)
+    load = load.squeeze()
 
     load_all = load.to_dict()
 

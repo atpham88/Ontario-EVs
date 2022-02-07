@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 
-def hydro_daily_cap(data_dir,day,hour):
+def hydro_daily_cap(data_dir,day,hour,starting_hour,starting_day):
     hydro_daily_data = pd.read_csv(data_dir + 'hydro_daily budget.csv')
     hydro_daily_data = hydro_daily_data.rename({'hydro_daily_1 (MW)': 'hydro_daily_1',
                                                  'hydro_daily_2 (MW)': 'hydro_daily_2',
@@ -14,9 +14,10 @@ def hydro_daily_cap(data_dir,day,hour):
     hydro_daily_data_T = hydro_daily_data_T.reset_index()
     name_hydro_daily = hydro_daily_data_T['index']
     hydro_daily_data_T = hydro_daily_data_T.drop('index', 1)
+    hydro_daily_data_T = hydro_daily_data_T.iloc[:,starting_day:starting_day+day]
+    hydro_daily_data_T.columns = pd.RangeIndex(0, len(hydro_daily_data_T.columns))
 
     hydro_daily = {(r, c): hydro_daily_data_T.at[r, c] for r in list(range(len(hydro_daily_data_T))) for c in list(range(day))}
-
 
     hydro_daily_hcap = {0:23, 1:206, 2:928, 3:1662, 4:1274}
 
@@ -34,7 +35,7 @@ def hydro_daily_cap(data_dir,day,hour):
 
     return hydro_daily,unit_hydro_daily,hydro_daily_hcap,bi_mat_hydro,name_hydro_daily
 
-def hydro_hourly_cap(data_dir,hour):
+def hydro_hourly_cap(data_dir,hour,starting_hour):
     hydro_hourly_data = pd.read_csv(data_dir + 'hydro_hourly capacity.csv')
     hydro_hourly_data = hydro_hourly_data.rename({'hydro_hourly_1 (MW)': 'hydro_hourly_1',
                                                   'hydro_hourly_2 (MW)': 'hydro_hourly_2',
@@ -50,9 +51,10 @@ def hydro_hourly_cap(data_dir,hour):
     hydro_hourly_data_T = hydro_hourly_data_T.reset_index()
     name_hydro_hourly = hydro_hourly_data_T['index']
     hydro_hourly_data_T = hydro_hourly_data_T.drop('index', 1)
+    hydro_hourly_data_T = hydro_hourly_data_T.iloc[:,starting_hour:starting_hour+hour]
+    hydro_hourly_data_T.columns = pd.RangeIndex(0, len(hydro_hourly_data_T.columns))
 
     hydro_hourly = {(r, c): hydro_hourly_data_T.at[r, c] for r in list(range(len(hydro_hourly_data_T))) for c in list(range(hour))}
-
     unit_hydro_hourly = len(hydro_hourly_data_T)
 
     return hydro_hourly, unit_hydro_hourly, name_hydro_hourly
