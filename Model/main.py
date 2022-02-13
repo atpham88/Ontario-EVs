@@ -22,27 +22,32 @@ from get_import_export import im_ex_data
 from get_hydro_cap import *
 
 def main_params():
-    year = 2018                             # Running year
-    uc_or_ed = 'UC'                         # Running ED or UC
-    ev_sce = 5                              # EV scenario to run
-    cost_hydro = 3.3                        # Operating cost of hydro units
-    c_ns = 9999999                          # Cost of unserved load
-    rampED = 'ON'                           # Turn on ramp constraints for ED
-    mon_to_run = 7                          # Specify month to run (if run whole year == 'Year')
-    day = monthrange(year, mon_to_run)[1]   # number of days in specified month
+    year = 2018                                     # Running year
+    uc_or_ed = 'UC'                                 # Running ED or UC
+    ev_sce = 5                                      # EV scenario to run
+    cost_hydro = 3.3                                # Operating cost of hydro units
+    nse_load = False                                # Allow non-served load
+    rampED = 'OFF'                                  # Turn on ramp constraints for ED
+    pminED = 'ON'
+    mon_to_run = 7                                  # Specify month to run (if run whole year == 'Year')
+    re_curtail = True                               # Whether or not to allow renewable curtailment in UC
 
     if mon_to_run == 'Year':
-        day = 365  # Equivalent days
-        starting_hour = 0
-    hour = day * 24
-    starting_day = (date(year, mon_to_run, 1) - date(year, 1, 1)).days
-    starting_hour = starting_day * 24
+        day = 365                                   # Equivalent days
+        starting_day = 0
+    else:
+        day = monthrange(year, mon_to_run)[1]       # number of days in specified month
+        starting_day = (date(year, mon_to_run, 1) - date(year, 1, 1)).days
 
-    return ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,starting_hour,starting_day
+    hour = day * 24
+    starting_hour = starting_day * 24
+    c_ns = 9999999                                  # Cost of unserved load
+
+    return ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,pminED,starting_hour,starting_day,re_curtail,nse_load
 
 
 def main_function():
-    (ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,starting_hour,starting_day) = main_params()
+    (ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,pminED,starting_hour,starting_day,re_curtail,nse_load) = main_params()
     (data_dir,results_folder,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir) = working_directory()
     (op_cost_non_re,pmin_non_re,cap_non_re,unit_non_re,name_non_re,su_cost_non_re,
      min_up_time,min_down_time,ramp_rate_non_re) = non_re_data(data_dir)
@@ -55,7 +60,7 @@ def main_function():
     model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_all,op_cost_non_re,load_all,cost_hydro,
                 pmin_non_re, cap_non_re,hydro_daily,hydro_hourly,hydro_daily_hcap,bi_mat_hydro,name_hydro_hourly,name_hydro_daily,
                 solar_cap,wind_cap,solar_name, wind_name,unit_non_re,name_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,
-                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED)
+                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED,pminED,re_curtail,nse_load)
 
 def working_directory():
     data_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\"
@@ -72,7 +77,7 @@ def working_directory():
 
 
 def main_sets(hour,day,unit_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,unit_wind):
-    T = list(range(hour))                       # Set of hours to run
+    T = list(range(hour))                               # Set of hours to run
     F = list(range(unit_non_re))
     Hd = list(range(unit_hydro_daily))
     Hh = list(range(unit_hydro_hourly))
@@ -84,23 +89,27 @@ def main_sets(hour,day,unit_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar
 def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_all,op_cost_non_re,load_all,cost_hydro,
                 pmin_non_re,cap_non_re,hydro_daily,hydro_hourly,hydro_daily_hcap,bi_mat_hydro,name_hydro_hourly,name_hydro_daily,
                 solar_cap, wind_cap,solar_name,wind_name,unit_non_re,name_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,
-                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED):
+                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED,pminED,re_curtail,nse_load):
 
     if uc_or_ed == 'ED': model = ConcreteModel(name="Econ Dispatch")
     elif uc_or_ed == 'UC': model = ConcreteModel(name="Unit Commitment")
 
     # Define variables:
-    model.g_F = Var(F,T, within=NonNegativeReals)                # non RE units generation
-    model.g_Hd = Var(Hd,T, within=NonNegativeReals)              # hydro daily units generation
-    model.g_Hh = Var(Hh,T, within=NonNegativeReals)              # hydro hourly units generation
+    model.g_F = Var(F,T, within=NonNegativeReals)                       # non RE units generation
+    model.g_Hd = Var(Hd,T, within=NonNegativeReals)                     # hydro daily units generation
+    model.g_Hh = Var(Hh,T, within=NonNegativeReals)                     # hydro hourly units generation
     if uc_or_ed == 'ED':
-        model.g_W = Var(W,T, within=NonNegativeReals)                # Wind units generation
-        model.g_S = Var(S,T, within=NonNegativeReals)                # Solar units generation
+        model.g_W = Var(W,T, within=NonNegativeReals)                   # Wind units generation
+        model.g_S = Var(S,T, within=NonNegativeReals)                   # Solar units generation
     if uc_or_ed == 'UC':
-        model.vF = Var(F, T, within=Binary)                     # whether or not a non re unit is on in a given hour
-        model.vFU = Var(F, T, within=Binary)                    # whether or not a non re unit is started up in a given hour
-        model.vFD = Var(F, T, within=Binary)                    # whether or not a non re unit is started up in a given hour
-        model.d_ns = Var(T, within=NonNegativeReals)            # non-served load
+        model.vF = Var(F, T, within=Binary)                             # whether or not a non re unit is on in a given hour
+        model.vFU = Var(F, T, within=Binary)                            # whether or not a non re unit is started up in a given hour
+        model.vFD = Var(F, T, within=Binary)                            # whether or not a non re unit is started up in a given hour
+        if nse_load == True:
+            model.d_ns = Var(T, within=NonNegativeReals)                # non-served load
+        if re_curtail==True:
+            model.g_W = Var(W, T, within=NonNegativeReals)              # Wind units generation
+            model.g_S = Var(S, T, within=NonNegativeReals)              # Solar units generation
 
     # Formulate constraints and  objective functions:
     # Constraints:
@@ -113,9 +122,24 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
         model.meet_demand_const = Constraint(T, rule=meet_demand)
     elif uc_or_ed == 'UC':
         def meet_demand(model, t):
-            return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
-                   + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] >= load_all[t] - sum(wind_cap[w, t] for w in W) \
-                   - sum(solar_cap[s, t] for s in S) - model.d_ns[t]
+            if re_curtail:
+                if nse_load == True:
+                    return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
+                           + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] + sum(model.g_W[w, t] for w in W) \
+                       + sum(model.g_S[s, t] for s in S) >= load_all[t] - model.d_ns[t]
+                elif nse_load == False:
+                    return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
+                           + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] + sum(model.g_W[w, t] for w in W) \
+                           + sum(model.g_S[s, t] for s in S) >= load_all[t]
+            elif not re_curtail:
+                if nse_load == True:
+                    return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
+                           + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] >= load_all[t] - sum(wind_cap[w, t] for w in W) \
+                           - sum(solar_cap[s, t] for s in S) - model.d_ns[t]
+            elif nse_load == False:
+                return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
+                       + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] >= load_all[t] - sum(wind_cap[w, t] for w in W) \
+                       - sum(solar_cap[s, t] for s in S)
         model.meet_demand_const = Constraint(T, rule=meet_demand)
 
     # Non RE unit constraints:
@@ -133,15 +157,18 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
             if t == 0:
                 return Constraint.Skip
             return model.g_F[f, t] - model.g_F[f, t - 1] <= ramp_rate_non_re[f]
-
         model.ramp_up_const = Constraint(F, T, rule=ramp_up_rate)
 
         def ramp_down_rate(model, f, t):
             if t == 0:
                 return Constraint.Skip
             return model.g_F[f, t] - model.g_F[f, t - 1] >= -ramp_rate_non_re[f]
-
         model.ramp_down_const = Constraint(F, T, rule=ramp_down_rate)
+
+    if uc_or_ed == 'ED' and pminED == 'ON':
+        def g_F_min(model, f, t):
+            return model.g_F[f, t] >= pmin_non_re[f]
+        model.pmin_const = Constraint(F, T, rule=g_F_min)
 
     if uc_or_ed == 'UC':
         # Minimum gen constraints:
@@ -188,6 +215,15 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
             return model.g_S[s, t] <= solar_cap[s,t]
         model.g_S_bound_const = Constraint(S, T, rule=g_S_bound)
 
+    if uc_or_ed == 'UC' and re_curtail==True:
+        def g_W_bound(model, w, t):
+            return model.g_W[w, t] <= wind_cap[w,t]
+        model.g_W_bound_const = Constraint(W, T, rule=g_W_bound)
+
+        def g_S_bound(model, s, t):
+            return model.g_S[s, t] <= solar_cap[s,t]
+        model.g_S_bound_const = Constraint(S, T, rule=g_S_bound)
+
     # Hydro gen constraints:
     # Hourly cap:
     def g_Hd_hourly_bound(model, d, t):
@@ -212,10 +248,15 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
         model.obj_func = Objective(rule=obj_function)
     elif uc_or_ed == 'UC':
         def obj_function(model):
-            return sum(c_ns*model.d_ns[t] for t in T) \
-                   + sum(model.vFU[f, t]*su_cost_non_re[f]+model.vF[f,t]*model.g_F[f, t]*op_cost_non_re[f]+c_ns*model.d_ns[t] for f in F for t in T) \
-                   + sum(model.g_Hd[d, t]*cost_hydro for d in Hd for t in T) \
-                   + sum(model.g_Hh[h, t]*cost_hydro for h in Hh for t in T)
+            if nse_load == True:
+                return sum(c_ns*model.d_ns[t] for t in T) \
+                       + sum(model.vFU[f, t]*su_cost_non_re[f]+model.vF[f,t]*model.g_F[f, t]*op_cost_non_re[f] for f in F for t in T) \
+                       + sum(model.g_Hd[d, t]*cost_hydro for d in Hd for t in T) \
+                       + sum(model.g_Hh[h, t]*cost_hydro for h in Hh for t in T)
+            elif nse_load == False:
+                return sum(model.vFU[f, t] * su_cost_non_re[f] + model.vF[f, t] * model.g_F[f, t] * op_cost_non_re[f] for f in F for t in T) \
+                       + sum(model.g_Hd[d, t] * cost_hydro for d in Hd for t in T) \
+                       + sum(model.g_Hh[h, t] * cost_hydro for h in Hh for t in T)
         model.obj_func = Objective(rule=obj_function)
 
 
@@ -259,15 +300,19 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
         for t in T:
             if uc_or_ed == 'ED':
                 g_S_star[s, t] = value(model.g_S[s, t])
-            elif uc_or_ed == 'UC':
+            elif uc_or_ed == 'UC' and re_curtail==False:
                 g_S_star[s, t] = solar_cap[s, t]
+            elif uc_or_ed == 'UC' and re_curtail==True:
+                g_S_star[s, t] = value(model.g_S[s, t])
 
     for w in W:
         for t in T:
             if uc_or_ed == 'ED':
                 g_W_star[w, t] = value(model.g_W[w, t])
-            elif uc_or_ed == 'UC':
+            elif uc_or_ed == 'UC' and re_curtail==False:
                 g_W_star[w, t] = wind_cap[w, t]
+            elif uc_or_ed == 'UC' and re_curtail==True:
+                g_W_star[w, t] = value(model.g_W[w, t])
 
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
