@@ -17,7 +17,7 @@ from matplotlib import rc
 
 from get_load_data import load_data
 from get_re_data import renewable_data
-from get_non_re_data import non_re_data
+from get_non_re_data_New import non_re_data
 from get_import_export import im_ex_data
 from get_hydro_cap import *
 
@@ -28,7 +28,7 @@ def main_params():
     cost_hydro = 3.3                                # Operating cost of hydro units
     nse_load = False                                # Allow non-served load
     rampED = 'OFF'                                  # Turn on ramp constraints for ED
-    pminED = 'ON'
+    pminED = 'OFF'
     mon_to_run = 7                                  # Specify month to run (if run whole year == 'Year')
     re_curtail = True                               # Whether or not to allow renewable curtailment in UC
 
@@ -43,11 +43,11 @@ def main_params():
     starting_hour = starting_day * 24
     c_ns = 9999999                                  # Cost of unserved load
 
-    return ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,pminED,starting_hour,starting_day,re_curtail,nse_load
+    return ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,pminED,starting_hour,starting_day,re_curtail,nse_load,mon_to_run
 
 
 def main_function():
-    (ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,pminED,starting_hour,starting_day,re_curtail,nse_load) = main_params()
+    (ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,pminED,starting_hour,starting_day,re_curtail,nse_load,mon_to_run) = main_params()
     (data_dir,results_folder,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir) = working_directory()
     (op_cost_non_re,pmin_non_re,cap_non_re,unit_non_re,name_non_re,su_cost_non_re,
      min_up_time,min_down_time,ramp_rate_non_re) = non_re_data(data_dir)
@@ -60,7 +60,7 @@ def main_function():
     model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_all,op_cost_non_re,load_all,cost_hydro,
                 pmin_non_re, cap_non_re,hydro_daily,hydro_hourly,hydro_daily_hcap,bi_mat_hydro,name_hydro_hourly,name_hydro_daily,
                 solar_cap,wind_cap,solar_name, wind_name,unit_non_re,name_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,
-                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED,pminED,re_curtail,nse_load)
+                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED,pminED,re_curtail,nse_load,mon_to_run)
 
 def working_directory():
     data_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\"
@@ -89,7 +89,7 @@ def main_sets(hour,day,unit_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar
 def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_all,op_cost_non_re,load_all,cost_hydro,
                 pmin_non_re,cap_non_re,hydro_daily,hydro_hourly,hydro_daily_hcap,bi_mat_hydro,name_hydro_hourly,name_hydro_daily,
                 solar_cap, wind_cap,solar_name,wind_name,unit_non_re,name_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,
-                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED,pminED,re_curtail,nse_load):
+                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED,pminED,re_curtail,nse_load,mon_to_run):
 
     if uc_or_ed == 'ED': model = ConcreteModel(name="Econ Dispatch")
     elif uc_or_ed == 'UC': model = ConcreteModel(name="Unit Commitment")
@@ -330,13 +330,16 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
     elif ev_sce == 5:
         case = 'EV_30%'
 
-    results_book = xw.Workbook(results_folder + 'OntarioEV_'+uc_or_ed+'_' + case + '.xlsx')
+    results_book = xw.Workbook(results_folder + 'OntarioEV_' + str(mon_to_run) + '_' +uc_or_ed+'_' + case + '.xlsx')
+    result_sheet_d = results_book.add_worksheet('Load')
+    result_sheet_ie = results_book.add_worksheet('Net Import-Export')
     result_sheet_f = results_book.add_worksheet('Non-RE Non-Hydro Generation')
     result_sheet_hd = results_book.add_worksheet('Daily Hydro Generation')
     result_sheet_hh = results_book.add_worksheet('Hourly Hydro Generation')
     result_sheet_s = results_book.add_worksheet('Solar Generation')
     result_sheet_w = results_book.add_worksheet('Wind Generation')
     result_sheet_c = results_book.add_worksheet('Total Cost')
+
     if uc_or_ed == 'ED':
         result_sheet_p = results_book.add_worksheet('LMP')
 
@@ -348,6 +351,20 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
     total_cost = value(model.obj_func)
     result_sheet_c.write("A1", "Total Cost (Million $)")
     result_sheet_c.write("A2", total_cost / 1000000)
+
+    # Write load results:
+    result_sheet_d.write("A1", "Hour")
+
+    for item in T:
+        result_sheet_d.write(0, item + 1, hour_number[item])
+        result_sheet_d.write(1, item + 1, load_all[item])
+
+    # Write import/export results:
+    result_sheet_ie.write("A1", "Hour")
+
+    for item in T:
+        result_sheet_ie.write(0, item + 1, hour_number[item])
+        result_sheet_ie.write(1, item + 1, im_ex_all[item])
 
     # Write electricity price result:
     if uc_or_ed == 'ED':
