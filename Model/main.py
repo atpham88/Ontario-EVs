@@ -29,7 +29,7 @@ def main_params():
     nse_load = False                                # Allow non-served load
     rampED = 'OFF'                                  # Turn on ramp constraints for ED
     pminED = 'OFF'
-    mon_to_run = 'Year'                                  # Specify month to run (if run whole year == 'Year')
+    mon_to_run = 1                                  # Specify month to run (if run whole year == 'Year')
     re_curtail = True                               # Whether or not to allow renewable curtailment in UC
 
     if mon_to_run == 'Year':
@@ -133,27 +133,27 @@ def model_solve(uc_or_ed, data_dir, results_folder, ev_sce, hour, day, month, T,
     if uc_or_ed == 'ED':
         def meet_demand(model, t):
             return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
-                   + sum(model.g_Hh[h, t] for h in Hh) + sum(model.g_W[w, t] for w in W) \
-                   + sum(model.g_S[s, t] for s in S) + im_ex_all[t] >= load_all[t]
+                   + sum(model.g_Hm[dd, t] for dd in Hm) + sum(model.g_Hh[h, t] for h in Hh) \
+                   + sum(model.g_W[w, t] for w in W) + sum(model.g_S[s, t] for s in S) + im_ex_all[t] >= load_all[t]
         model.meet_demand_const = Constraint(T, rule=meet_demand)
     elif uc_or_ed == 'UC':
         def meet_demand(model, t):
             if re_curtail:
                 if nse_load == True:
                     return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
-                           + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] + sum(model.g_W[w, t] for w in W) \
-                       + sum(model.g_S[s, t] for s in S) >= load_all[t] - model.d_ns[t]
+                           + sum(model.g_Hm[dd, t] for dd in Hm) + sum(model.g_Hh[h, t] for h in Hh) \
+                           + im_ex_all[t] + sum(model.g_W[w, t] for w in W) + sum(model.g_S[s, t] for s in S) >= load_all[t] - model.d_ns[t]
                 elif nse_load == False:
                     return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
-                           + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] + sum(model.g_W[w, t] for w in W) \
-                           + sum(model.g_S[s, t] for s in S) >= load_all[t]
+                           + sum(model.g_Hm[dd, t] for dd in Hm) + sum(model.g_Hh[h, t] for h in Hh) \
+                           + im_ex_all[t] + sum(model.g_W[w, t] for w in W) + sum(model.g_S[s, t] for s in S) >= load_all[t]
             elif not re_curtail:
                 if nse_load == True:
-                    return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
+                    return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) + sum(model.g_Hm[dd, t] for dd in Hm) \
                            + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] >= load_all[t] - sum(wind_cap[w, t] for w in W) \
                            - sum(solar_cap[s, t] for s in S) - model.d_ns[t]
             elif nse_load == False:
-                return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) \
+                return sum(model.g_F[f, t] for f in F) + sum(model.g_Hd[d, t] for d in Hd) + sum(model.g_Hm[dd, t] for dd in Hm) \
                        + sum(model.g_Hh[h, t] for h in Hh) + im_ex_all[t] >= load_all[t] - sum(wind_cap[w, t] for w in W) \
                        - sum(solar_cap[s, t] for s in S)
         model.meet_demand_const = Constraint(T, rule=meet_demand)
