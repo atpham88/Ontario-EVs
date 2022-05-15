@@ -23,44 +23,54 @@ from get_hydro_cap import *
 
 def main_params():
     year = 2018                                     # Running year
-    uc_or_ed = 'UC'                                 # Running ED or UC
+    uc_or_ed = 'ED'                                 # Running ED or UC
     ev_sce = 5                                      # EV scenario to run
     cost_hydro = 3.3                                # Operating cost of hydro units
     nse_load = False                                # Allow non-served load
     rampED = 'OFF'                                  # Turn on ramp constraints for ED
     pminED = 'OFF'
-    mon_to_run = 7                                  # Specify month to run (if run whole year == 'Year')
+    mon_to_run = 'Year'                                  # Specify month to run (if run whole year == 'Year')
     re_curtail = True                               # Whether or not to allow renewable curtailment in UC
 
     if mon_to_run == 'Year':
         day = 365                                   # Equivalent days
+        month = 12
         starting_day = 0
+        starting_month = 0
     else:
         day = monthrange(year, mon_to_run)[1]       # number of days in specified month
+        month = 1
         starting_day = (date(year, mon_to_run, 1) - date(year, 1, 1)).days
+        starting_month = mon_to_run-1
 
     hour = day * 24
     starting_hour = starting_day * 24
     c_ns = 9999999                                  # Cost of unserved load
 
-    return ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,pminED,starting_hour,starting_day,re_curtail,nse_load,mon_to_run
+    return ev_sce, hour,day, month, cost_hydro, uc_or_ed, c_ns, rampED, pminED,\
+           starting_hour, starting_day, starting_month, re_curtail, nse_load, mon_to_run
 
 
 def main_function():
-    (ev_sce,hour,day,cost_hydro,uc_or_ed,c_ns,rampED,pminED,starting_hour,starting_day,re_curtail,nse_load,mon_to_run) = main_params()
+    (ev_sce, hour, day, month, cost_hydro, uc_or_ed, c_ns, rampED, pminED,
+     starting_hour, starting_day, starting_month, re_curtail, nse_load, mon_to_run) = main_params()
     (data_dir,results_folder,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir) = working_directory()
     (op_cost_non_re,pmin_non_re,cap_non_re,unit_non_re,name_non_re,su_cost_non_re,
      min_up_time,min_down_time,ramp_rate_non_re) = non_re_data(data_dir)
-    (hydro_daily,unit_hydro_daily,hydro_daily_hcap,bi_mat_hydro,name_hydro_daily) = hydro_daily_cap(data_dir,day,hour,starting_hour,starting_day)
-    (hydro_hourly, unit_hydro_hourly,name_hydro_hourly) = hydro_hourly_cap(data_dir,hour,starting_hour)
+    (hydro_daily, unit_hydro_daily, hydro_daily_hcap, bi_mat_hydro, name_hydro_daily) = hydro_daily_cap(data_dir, day, hour, starting_hour, starting_day)
+    (hydro_monthly, unit_hydro_monthly, hydro_monthly_hcap, bi_mat_hydro_m, name_hydro_monthly) = hydro_monthly_cap(data_dir, hour, month, starting_month)
+    (hydro_hourly, unit_hydro_hourly, name_hydro_hourly) = hydro_hourly_cap(data_dir, hour, starting_hour)
     (solar_cap, wind_cap, solar_name, wind_name, unit_solar,unit_wind) = renewable_data(data_dir, solar_src_dir, solar_dst_dir, wind_src_dir, wind_dst_dir,hour,starting_hour)
-    (T,D,F,Hd,Hh,W,S) = main_sets(hour,day,unit_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,unit_wind)
-    im_ex_all = im_ex_data(data_dir,hour,starting_hour)
-    load_all = load_data(ev_sce, data_dir,hour,starting_hour)
-    model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_all,op_cost_non_re,load_all,cost_hydro,
-                pmin_non_re, cap_non_re,hydro_daily,hydro_hourly,hydro_daily_hcap,bi_mat_hydro,name_hydro_hourly,name_hydro_daily,
-                solar_cap,wind_cap,solar_name, wind_name,unit_non_re,name_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,
-                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED,pminED,re_curtail,nse_load,mon_to_run)
+    (T, D, Mm, F, Hd, Hm, Hh, W, S) = main_sets(hour, day, month, unit_non_re, unit_hydro_daily, unit_hydro_monthly, unit_hydro_hourly, unit_solar, unit_wind)
+    im_ex_all = im_ex_data(data_dir, hour, starting_hour)
+    load_all = load_data(ev_sce, data_dir, hour, starting_hour)
+    model_solve(uc_or_ed, data_dir, results_folder, ev_sce, hour, day, month, T, D, Mm, F, Hd, Hm, Hh, W, S, im_ex_all,
+                op_cost_non_re, load_all,cost_hydro, pmin_non_re, cap_non_re, hydro_daily, hydro_hourly,
+                hydro_daily_hcap, bi_mat_hydro, name_hydro_hourly, name_hydro_daily, hydro_monthly,
+                unit_hydro_monthly, hydro_monthly_hcap, bi_mat_hydro_m, name_hydro_monthly, solar_cap,
+                wind_cap, solar_name, wind_name, unit_non_re, name_non_re, unit_hydro_daily, unit_hydro_hourly,
+                unit_solar, unit_wind, su_cost_non_re, min_up_time, min_down_time, ramp_rate_non_re,
+                c_ns, rampED, pminED, re_curtail, nse_load, mon_to_run)
 
 def working_directory():
     data_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\"
@@ -76,20 +86,25 @@ def working_directory():
     return data_dir,results_folder,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir
 
 
-def main_sets(hour,day,unit_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,unit_wind):
+def main_sets(hour, day, month, unit_non_re, unit_hydro_daily, unit_hydro_monthly, unit_hydro_hourly, unit_solar,unit_wind):
     T = list(range(hour))                               # Set of hours to run
     F = list(range(unit_non_re))
     Hd = list(range(unit_hydro_daily))
+    Hm = list(range(unit_hydro_monthly))
     Hh = list(range(unit_hydro_hourly))
     W = list(range(unit_wind))
     S = list(range(unit_solar))
     D = list(range(day))
-    return T,D,F,Hd,Hh,W,S
+    Mm = list(range(month))
+    return T, D, Mm, F, Hd, Hm, Hh, W, S
 
-def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S,im_ex_all,op_cost_non_re,load_all,cost_hydro,
-                pmin_non_re,cap_non_re,hydro_daily,hydro_hourly,hydro_daily_hcap,bi_mat_hydro,name_hydro_hourly,name_hydro_daily,
-                solar_cap, wind_cap,solar_name,wind_name,unit_non_re,name_non_re,unit_hydro_daily,unit_hydro_hourly,unit_solar,
-                unit_wind,su_cost_non_re,min_up_time,min_down_time,ramp_rate_non_re,c_ns,rampED,pminED,re_curtail,nse_load,mon_to_run):
+def model_solve(uc_or_ed, data_dir, results_folder, ev_sce, hour, day, month, T, D, Mm, F, Hd, Hm, Hh, W, S, im_ex_all,
+                op_cost_non_re, load_all,cost_hydro, pmin_non_re, cap_non_re, hydro_daily, hydro_hourly,
+                hydro_daily_hcap, bi_mat_hydro, name_hydro_hourly, name_hydro_daily, hydro_monthly,
+                unit_hydro_monthly, hydro_monthly_hcap, bi_mat_hydro_m, name_hydro_monthly, solar_cap,
+                wind_cap, solar_name, wind_name, unit_non_re, name_non_re, unit_hydro_daily, unit_hydro_hourly,
+                unit_solar, unit_wind, su_cost_non_re, min_up_time, min_down_time, ramp_rate_non_re,
+                c_ns, rampED, pminED, re_curtail, nse_load, mon_to_run):
 
     if uc_or_ed == 'ED': model = ConcreteModel(name="Econ Dispatch")
     elif uc_or_ed == 'UC': model = ConcreteModel(name="Unit Commitment")
@@ -97,6 +112,7 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
     # Define variables:
     model.g_F = Var(F,T, within=NonNegativeReals)                       # non RE units generation
     model.g_Hd = Var(Hd,T, within=NonNegativeReals)                     # hydro daily units generation
+    model.g_Hm = Var(Hm, T, within=NonNegativeReals)                    # hydro monthly units generation
     model.g_Hh = Var(Hh,T, within=NonNegativeReals)                     # hydro hourly units generation
     if uc_or_ed == 'ED':
         model.g_W = Var(W,T, within=NonNegativeReals)                   # Wind units generation
@@ -230,20 +246,30 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
         return model.g_Hd[d, t] <= hydro_daily_hcap[d]
     model.g_Hd_hourly_bound_const = Constraint(Hd, T, rule=g_Hd_hourly_bound)
 
+    def g_Hm_hourly_bound(model, d, t):
+        return model.g_Hm[d, t] <= hydro_monthly_hcap[d]
+    model.g_Hm_hourly_bound_const = Constraint(Hd, T, rule=g_Hm_hourly_bound)
+
     def g_Hh_bound(model, h, t):
-        return model.g_Hh[h, t] <= hydro_hourly[h,t]
+        return model.g_Hh[h, t] <= hydro_hourly[h, t]
     model.g_Hh_bound_const = Constraint(Hh, T, rule=g_Hh_bound)
 
-    #Daily cap for daily hydro:
+    # Daily cap for daily hydro:
     def g_Hd_daily_bound(model, d, m):
-        return sum(model.g_Hd[d, t]*bi_mat_hydro[d,t,m] for t in T) <= hydro_daily[d,m]
+        return sum(model.g_Hd[d, t] * bi_mat_hydro[d, t ,m] for t in T) <= hydro_daily[d, m]
     model.g_Hd_daily_bound_const = Constraint(Hd, D, rule=g_Hd_daily_bound)
+
+    # Monthly cap for monthly hydro:
+    def g_Hm_monthly_bound(model, dd, mm):
+        return sum(model.g_Hm[dd, t] * bi_mat_hydro_m[dd, t, mm] for t in T) <= hydro_monthly[dd, mm]
+    model.g_Hm_monthly_bound_const = Constraint(Hm, Mm, rule=g_Hm_monthly_bound)
 
     # Objective function:
     if uc_or_ed == 'ED':
         def obj_function(model):
             return sum(model.g_F[f, t]*op_cost_non_re[f] for f in F for t in T) \
                    + sum(model.g_Hd[d, t]*cost_hydro for d in Hd for t in T) \
+                   + sum(model.g_Hm[dd, t]*cost_hydro for dd in Hm for t in T) \
                    + sum(model.g_Hh[h, t]*cost_hydro for h in Hh for t in T)
         model.obj_func = Objective(rule=obj_function)
     elif uc_or_ed == 'UC':
@@ -252,10 +278,12 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
                 return sum(c_ns*model.d_ns[t] for t in T) \
                        + sum(model.vFU[f, t]*su_cost_non_re[f]+model.vF[f,t]*model.g_F[f, t]*op_cost_non_re[f] for f in F for t in T) \
                        + sum(model.g_Hd[d, t]*cost_hydro for d in Hd for t in T) \
+                       + sum(model.g_Hm[dd, t] * cost_hydro for dd in Hm for t in T) \
                        + sum(model.g_Hh[h, t]*cost_hydro for h in Hh for t in T)
             elif nse_load == False:
                 return sum(model.vFU[f, t] * su_cost_non_re[f] + model.vF[f, t] * model.g_F[f, t] * op_cost_non_re[f] for f in F for t in T) \
                        + sum(model.g_Hd[d, t] * cost_hydro for d in Hd for t in T) \
+                       + sum(model.g_Hm[dd, t] * cost_hydro for dd in Hm for t in T) \
                        + sum(model.g_Hh[h, t] * cost_hydro for h in Hh for t in T)
         model.obj_func = Objective(rule=obj_function)
 
@@ -280,6 +308,7 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
     # Print results:
     g_F_star = np.zeros((unit_non_re, hour))
     g_Hd_star = np.zeros((unit_hydro_daily, hour))
+    g_Hm_star = np.zeros((unit_hydro_monthly, hour))
     g_Hh_star = np.zeros((unit_hydro_hourly, hour))
     g_S_star = np.zeros((unit_solar, hour))
     g_W_star = np.zeros((unit_wind, hour))
@@ -291,6 +320,10 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
     for d in Hd:
         for t in T:
             g_Hd_star[d, t] = value(model.g_Hd[d, t])
+
+    for dd in Hm:
+        for t in T:
+            g_Hm_star[dd, t] = value(model.g_Hm[dd, t])
 
     for h in Hh:
         for t in T:
@@ -335,6 +368,7 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
     result_sheet_ie = results_book.add_worksheet('Net Import-Export')
     result_sheet_f = results_book.add_worksheet('Non-RE Non-Hydro Generation')
     result_sheet_hd = results_book.add_worksheet('Daily Hydro Generation')
+    result_sheet_hm = results_book.add_worksheet('Monthly Hydro Generation')
     result_sheet_hh = results_book.add_worksheet('Hourly Hydro Generation')
     result_sheet_s = results_book.add_worksheet('Solar Generation')
     result_sheet_w = results_book.add_worksheet('Wind Generation')
@@ -392,21 +426,30 @@ def model_solve(uc_or_ed,data_dir,results_folder,ev_sce,hour,day,T,D,F,Hd,Hh,W,S
 
     # Write hydro results:
     result_sheet_hd.write("A1", "Plant ID")
+    result_sheet_hm.write("A1", "Plant ID")
     result_sheet_hh.write("A1", "Plant ID")
 
     for item in Hd:
         result_sheet_hd.write(item + 1, 0, name_hydro_daily[item])
+
+    for item in Hm:
+        result_sheet_hm.write(item + 1, 0, name_hydro_monthly[item])
 
     for item in Hh:
         result_sheet_hh.write(item + 1, 0, name_hydro_hourly[item])
 
     for item in T:
         result_sheet_hd.write(0, item + 1, hour_number[item])
+        result_sheet_hm.write(0, item + 1, hour_number[item])
         result_sheet_hh.write(0, item + 1, hour_number[item])
 
     for item_1 in Hd:
         for item_2 in T:
             result_sheet_hd.write(item_1 + 1, item_2 + 1, g_Hd_star[item_1, item_2])
+
+    for item_1 in Hm:
+        for item_2 in T:
+            result_sheet_hm.write(item_1 + 1, item_2 + 1, g_Hm_star[item_1, item_2])
 
     for item_1 in Hh:
         for item_2 in T:
