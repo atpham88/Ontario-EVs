@@ -11,9 +11,6 @@ from pyomo.opt import SolverFactory
 import xlsxwriter as xw
 from calendar import monthrange
 from datetime import date
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import rc
 
 from get_load_data import load_data
 from get_re_data import renewable_data
@@ -29,7 +26,7 @@ def main_params():
     nse_load = False                                # Allow non-served load
     rampED = 'OFF'                                  # Turn on ramp constraints for ED
     pminED = 'OFF'
-    mon_to_run = 1                                  # Specify month to run (if run whole year == 'Year')
+    mon_to_run = 'Year'                                  # Specify month to run (if run whole year == 'Year')
     re_curtail = True                               # Whether or not to allow renewable curtailment in UC
 
     if mon_to_run == 'Year':
@@ -47,25 +44,25 @@ def main_params():
     starting_hour = starting_day * 24
     c_ns = 9999999                                  # Cost of unserved load
 
-    return ev_sce, hour,day, month, cost_hydro, uc_or_ed, c_ns, rampED, pminED,\
+    return ev_sce, hour, day, month, cost_hydro, uc_or_ed, c_ns, rampED, pminED,\
            starting_hour, starting_day, starting_month, re_curtail, nse_load, mon_to_run
 
 
 def main_function():
     (ev_sce, hour, day, month, cost_hydro, uc_or_ed, c_ns, rampED, pminED,
      starting_hour, starting_day, starting_month, re_curtail, nse_load, mon_to_run) = main_params()
-    (data_dir,results_folder,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir) = working_directory()
-    (op_cost_non_re,pmin_non_re,cap_non_re,unit_non_re,name_non_re,su_cost_non_re,
-     min_up_time,min_down_time,ramp_rate_non_re) = non_re_data(data_dir)
+    (data_dir, results_folder, solar_src_dir, solar_dst_dir, wind_src_dir, wind_dst_dir) = working_directory()
+    (op_cost_non_re, pmin_non_re, cap_non_re, unit_non_re, name_non_re, su_cost_non_re,
+     min_up_time, min_down_time, ramp_rate_non_re) = non_re_data(data_dir)
     (hydro_daily, unit_hydro_daily, hydro_daily_hcap, bi_mat_hydro, name_hydro_daily) = hydro_daily_cap(data_dir, day, hour, starting_hour, starting_day)
     (hydro_monthly, unit_hydro_monthly, hydro_monthly_hcap, bi_mat_hydro_m, name_hydro_monthly) = hydro_monthly_cap(data_dir, hour, month, starting_month)
     (hydro_hourly, unit_hydro_hourly, name_hydro_hourly) = hydro_hourly_cap(data_dir, hour, starting_hour)
-    (solar_cap, wind_cap, solar_name, wind_name, unit_solar,unit_wind) = renewable_data(data_dir, solar_src_dir, solar_dst_dir, wind_src_dir, wind_dst_dir,hour,starting_hour)
+    (solar_cap, wind_cap, solar_name, wind_name, unit_solar, unit_wind) = renewable_data(data_dir, solar_src_dir, solar_dst_dir, wind_src_dir, wind_dst_dir, hour, starting_hour)
     (T, D, Mm, F, Hd, Hm, Hh, W, S) = main_sets(hour, day, month, unit_non_re, unit_hydro_daily, unit_hydro_monthly, unit_hydro_hourly, unit_solar, unit_wind)
     im_ex_all = im_ex_data(data_dir, hour, starting_hour)
     load_all = load_data(ev_sce, data_dir, hour, starting_hour)
     model_solve(uc_or_ed, data_dir, results_folder, ev_sce, hour, day, month, T, D, Mm, F, Hd, Hm, Hh, W, S, im_ex_all,
-                op_cost_non_re, load_all,cost_hydro, pmin_non_re, cap_non_re, hydro_daily, hydro_hourly,
+                op_cost_non_re, load_all, cost_hydro, pmin_non_re, cap_non_re, hydro_daily, hydro_hourly,
                 hydro_daily_hcap, bi_mat_hydro, name_hydro_hourly, name_hydro_daily, hydro_monthly,
                 unit_hydro_monthly, hydro_monthly_hcap, bi_mat_hydro_m, name_hydro_monthly, solar_cap,
                 wind_cap, solar_name, wind_name, unit_non_re, name_non_re, unit_hydro_daily, unit_hydro_hourly,
@@ -83,10 +80,10 @@ def working_directory():
                    "VRE_Resource_Analysis-ON\\Wind_Generation_Data\\"
     wind_dst_dir = "C:\\Users\\atpha\\Documents\\Postdocs\\Projects\\Ontario-EVs\\Data Input\\" \
                    "VRE_Resource_Analysis-ON\\wind_all\\"
-    return data_dir,results_folder,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_dir
+    return data_dir, results_folder, solar_src_dir, solar_dst_dir, wind_src_dir, wind_dst_dir
 
 
-def main_sets(hour, day, month, unit_non_re, unit_hydro_daily, unit_hydro_monthly, unit_hydro_hourly, unit_solar,unit_wind):
+def main_sets(hour, day, month, unit_non_re, unit_hydro_daily, unit_hydro_monthly, unit_hydro_hourly, unit_solar, unit_wind):
     T = list(range(hour))                               # Set of hours to run
     F = list(range(unit_non_re))
     Hd = list(range(unit_hydro_daily))
@@ -99,7 +96,7 @@ def main_sets(hour, day, month, unit_non_re, unit_hydro_daily, unit_hydro_monthl
     return T, D, Mm, F, Hd, Hm, Hh, W, S
 
 def model_solve(uc_or_ed, data_dir, results_folder, ev_sce, hour, day, month, T, D, Mm, F, Hd, Hm, Hh, W, S, im_ex_all,
-                op_cost_non_re, load_all,cost_hydro, pmin_non_re, cap_non_re, hydro_daily, hydro_hourly,
+                op_cost_non_re, load_all, cost_hydro, pmin_non_re, cap_non_re, hydro_daily, hydro_hourly,
                 hydro_daily_hcap, bi_mat_hydro, name_hydro_hourly, name_hydro_daily, hydro_monthly,
                 unit_hydro_monthly, hydro_monthly_hcap, bi_mat_hydro_m, name_hydro_monthly, solar_cap,
                 wind_cap, solar_name, wind_name, unit_non_re, name_non_re, unit_hydro_daily, unit_hydro_hourly,
@@ -110,13 +107,13 @@ def model_solve(uc_or_ed, data_dir, results_folder, ev_sce, hour, day, month, T,
     elif uc_or_ed == 'UC': model = ConcreteModel(name="Unit Commitment")
 
     # Define variables:
-    model.g_F = Var(F,T, within=NonNegativeReals)                       # non RE units generation
-    model.g_Hd = Var(Hd,T, within=NonNegativeReals)                     # hydro daily units generation
+    model.g_F = Var(F, T, within=NonNegativeReals)                       # non RE units generation
+    model.g_Hd = Var(Hd, T, within=NonNegativeReals)                     # hydro daily units generation
     model.g_Hm = Var(Hm, T, within=NonNegativeReals)                    # hydro monthly units generation
     model.g_Hh = Var(Hh,T, within=NonNegativeReals)                     # hydro hourly units generation
     if uc_or_ed == 'ED':
-        model.g_W = Var(W,T, within=NonNegativeReals)                   # Wind units generation
-        model.g_S = Var(S,T, within=NonNegativeReals)                   # Solar units generation
+        model.g_W = Var(W, T, within=NonNegativeReals)                   # Wind units generation
+        model.g_S = Var(S, T, within=NonNegativeReals)                   # Solar units generation
     if uc_or_ed == 'UC':
         model.vF = Var(F, T, within=Binary)                             # whether or not a non re unit is on in a given hour
         model.vFU = Var(F, T, within=Binary)                            # whether or not a non re unit is started up in a given hour
