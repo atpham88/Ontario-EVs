@@ -113,5 +113,5 @@ def renewable_data(data_dir,solar_src_dir,solar_dst_dir,wind_src_dir,wind_dst_di
     unit_solar = len(solar_data)
     unit_wind = len(wind_data)
 
-    return solar_cap, wind_cap, solar_name, wind_name, unit_solar,unit_wind
+    return solar_cap, wind_cap, solar_name, wind_name, unit_solar, unit_wind
 
